@@ -38,6 +38,7 @@ model Book {
   author    String
   genre     String
   status    ReadingStatus @default(WANT_TO_READ)
+  price     Decimal?      @db.Decimal(10, 2)
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   createdAt DateTime      @default(now())
