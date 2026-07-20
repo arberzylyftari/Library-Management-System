@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { errorHandler } from "./middleware/error";
 import { authRouter } from "./routes/auth.routes";
+import { bookRouter } from "./routes/book.routes";
 
 export const app = express();
 
@@ -13,6 +14,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/auth", authRouter);
+app.use("/books", bookRouter);
 
 app.use(errorHandler);
 
