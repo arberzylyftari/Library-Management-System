@@ -1,4 +1,5 @@
 .context/
+CLAUDE.md
 node_modules/
 dist/
 build/
