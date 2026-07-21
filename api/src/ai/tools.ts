@@ -18,6 +18,44 @@ function scopeWhere(user: TokenPayload): Prisma.BookWhereInput {
 
 const STATUS_VALUES = ["WANT_TO_READ", "READING", "COMPLETED"] as const;
 
+// Shared aggregate query behind both the general library_summary tool (scoped
+// per role) and the insights tool (always self-scoped) — same shape, different
+// `where`.
+async function computeLibrarySummary(where: Prisma.BookWhereInput) {
+  const [total, byStatus, topGenres, authors, price] = await Promise.all([
+    prisma.book.count({ where }),
+    prisma.book.groupBy({ by: ["status"], where, _count: { _all: true } }),
+    prisma.book.groupBy({
+      by: ["genre"],
+      where,
+      _count: { genre: true },
+      orderBy: { _count: { genre: "desc" } },
+      take: 5,
+    }),
+    prisma.book.groupBy({ by: ["author"], where }),
+    prisma.book.aggregate({
+      where: { ...where, price: { not: null } },
+      _min: { price: true },
+      _max: { price: true },
+      _avg: { price: true },
+      _count: { price: true },
+    }),
+  ]);
+
+  return {
+    totalBooks: total,
+    byStatus: byStatus.map((s) => ({ status: s.status, count: s._count._all })),
+    topGenres: topGenres.map((g) => ({ genre: g.genre, count: g._count.genre })),
+    distinctAuthors: authors.length,
+    price: {
+      withPrice: price._count.price,
+      min: price._min.price,
+      max: price._max.price,
+      avg: price._avg.price,
+    },
+  };
+}
+
 /**
  * Build the set of read-only, user-scoped tools the AI query agent may call.
  * Every tool runs a whitelisted Prisma query — the model never sees or writes SQL.
@@ -168,40 +206,7 @@ export function createLibraryTools(user: TokenPayload, collected: ToolResult[]) 
       "status, top genres, distinct author count, and price min/max/average. Use " +
       "this for overview or 'insights' style questions.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
-    run: async () => {
-      const [total, byStatus, topGenres, authors, price] = await Promise.all([
-        prisma.book.count({ where: scope }),
-        prisma.book.groupBy({ by: ["status"], where: scope, _count: { _all: true } }),
-        prisma.book.groupBy({
-          by: ["genre"],
-          where: scope,
-          _count: { genre: true },
-          orderBy: { _count: { genre: "desc" } },
-          take: 5,
-        }),
-        prisma.book.groupBy({ by: ["author"], where: scope }),
-        prisma.book.aggregate({
-          where: { ...scope, price: { not: null } },
-          _min: { price: true },
-          _max: { price: true },
-          _avg: { price: true },
-          _count: { price: true },
-        }),
-      ]);
-
-      return record("library_summary", {
-        totalBooks: total,
-        byStatus: byStatus.map((s) => ({ status: s.status, count: s._count._all })),
-        topGenres: topGenres.map((g) => ({ genre: g.genre, count: g._count.genre })),
-        distinctAuthors: authors.length,
-        price: {
-          withPrice: price._count.price,
-          min: price._min.price,
-          max: price._max.price,
-          avg: price._avg.price,
-        },
-      });
-    },
+    run: async () => record("library_summary", await computeLibrarySummary(scope)),
   });
 
   return [listBooks, bookCountsByOwner, titlePopularity, librarySummary];
@@ -255,4 +260,30 @@ export function createRecommendationTools(user: TokenPayload, collected: ToolRes
   });
 
   return [myLibraryProfile];
+}
+
+/**
+ * A single read-only tool for the insights agent: the current user's own
+ * library stats (same aggregate shape as library_summary, but — like
+ * recommendations — always self-scoped regardless of role, since "your
+ * reading habits" is personal even for an admin account).
+ */
+export function createInsightsTools(user: TokenPayload, collected: ToolResult[]) {
+  const scope: Prisma.BookWhereInput = { userId: user.userId };
+
+  const record = <T>(tool: string, data: T): string => {
+    collected.push({ tool, data });
+    return JSON.stringify(data);
+  };
+
+  const myReadingStats = betaTool({
+    name: "get_my_reading_stats",
+    description:
+      "This user's own library stats: total books, counts by reading status, " +
+      "top genres, distinct author count, and price min/max/average.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    run: async () => record("get_my_reading_stats", await computeLibrarySummary(scope)),
+  });
+
+  return [myReadingStats];
 }
