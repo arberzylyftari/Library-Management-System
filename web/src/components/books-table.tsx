@@ -23,11 +23,12 @@ import { cn } from "@/lib/utils";
 interface BooksTableProps {
   books: Book[];
   showOwner?: boolean;
-  onEdit: (book: Book) => void;
-  onDelete: (book: Book) => void;
+  onEdit?: (book: Book) => void;
+  onDelete?: (book: Book) => void;
 }
 
 export function BooksTable({ books, showOwner, onEdit, onDelete }: BooksTableProps) {
+  const showActions = Boolean(onEdit || onDelete);
   return (
     <div className="overflow-hidden rounded-lg border">
       <Table>
@@ -39,7 +40,7 @@ export function BooksTable({ books, showOwner, onEdit, onDelete }: BooksTablePro
             {showOwner && <TableHead>Owner</TableHead>}
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Price</TableHead>
-            <TableHead className="w-10" />
+            {showActions && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -72,24 +73,30 @@ export function BooksTable({ books, showOwner, onEdit, onDelete }: BooksTablePro
                 <TableCell className="text-right tabular-nums">
                   {formatPrice(book.price)}
                 </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="size-8">
-                        <MoreHorizontal className="size-4" />
-                        <span className="sr-only">Actions</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onEdit(book)}>
-                        <Pencil /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive" onClick={() => onDelete(book)}>
-                        <Trash2 /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                {showActions && (
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8">
+                          <MoreHorizontal className="size-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {onEdit && (
+                          <DropdownMenuItem onClick={() => onEdit(book)}>
+                            <Pencil /> Edit
+                          </DropdownMenuItem>
+                        )}
+                        {onDelete && (
+                          <DropdownMenuItem variant="destructive" onClick={() => onDelete(book)}>
+                            <Trash2 /> Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                )}
               </motion.tr>
             ))}
           </AnimatePresence>
