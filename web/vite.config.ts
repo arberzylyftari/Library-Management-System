@@ -1,7 +1,7 @@
 import { fileURLToPath, URL } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,6 +10,15 @@ export default defineConfig({
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
+  },
+  test: {
+    environment: "jsdom",
+    // jsdom's default document URL is "about:blank", an opaque origin where
+    // the Storage API (localStorage) isn't available — the app relies on it
+    // for the auth token and theme, so tests need a real origin.
+    environmentOptions: { jsdom: { url: "http://localhost:3000" } },
+    globals: true,
+    setupFiles: ["./tests/setup.ts"],
   },
   server: {
     proxy: {
