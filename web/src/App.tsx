@@ -4,6 +4,7 @@ import { AppLayout } from "@/layouts/app-layout";
 import { AdminPage } from "@/pages/AdminPage";
 import { AskPage } from "@/pages/AskPage";
 import { BooksPage } from "@/pages/BooksPage";
+import { InsightsPage } from "@/pages/InsightsPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { RecommendationsPage } from "@/pages/RecommendationsPage";
 import { RegisterPage } from "@/pages/RegisterPage";
@@ -19,6 +20,7 @@ function App() {
           <Route path="/books" element={<BooksPage />} />
           <Route path="/ask" element={<AskPage />} />
           <Route path="/recommendations" element={<RecommendationsPage />} />
+          <Route path="/insights" element={<InsightsPage />} />
         </Route>
       </Route>
 
