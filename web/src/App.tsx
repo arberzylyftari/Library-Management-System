@@ -5,6 +5,7 @@ import { AdminPage } from "@/pages/AdminPage";
 import { AskPage } from "@/pages/AskPage";
 import { BooksPage } from "@/pages/BooksPage";
 import { LoginPage } from "@/pages/LoginPage";
+import { RecommendationsPage } from "@/pages/RecommendationsPage";
 import { RegisterPage } from "@/pages/RegisterPage";
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/books" element={<BooksPage />} />
           <Route path="/ask" element={<AskPage />} />
+          <Route path="/recommendations" element={<RecommendationsPage />} />
         </Route>
       </Route>
 

@@ -206,3 +206,53 @@ export function createLibraryTools(user: TokenPayload, collected: ToolResult[]) 
 
   return [listBooks, bookCountsByOwner, titlePopularity, librarySummary];
 }
+
+/**
+ * A single read-only tool for the recommendation agent: the current user's own
+ * reading profile (never admin-widened — recommendations are always personal,
+ * even for an admin account) plus every title they already own, so the model
+ * can avoid recommending a duplicate.
+ */
+export function createRecommendationTools(user: TokenPayload, collected: ToolResult[]) {
+  const scope: Prisma.BookWhereInput = { userId: user.userId };
+
+  const record = <T>(tool: string, data: T): string => {
+    collected.push({ tool, data });
+    return JSON.stringify(data);
+  };
+
+  const myLibraryProfile = betaTool({
+    name: "get_my_library_profile",
+    description:
+      "This user's own reading profile: counts by reading status, top genres, " +
+      "and the full list of titles/authors/genres they already own (so you don't " +
+      "recommend something they already have).",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    run: async () => {
+      const [byStatus, topGenres, owned] = await Promise.all([
+        prisma.book.groupBy({ by: ["status"], where: scope, _count: { _all: true } }),
+        prisma.book.groupBy({
+          by: ["genre"],
+          where: scope,
+          _count: { genre: true },
+          orderBy: { _count: { genre: "desc" } },
+          take: 5,
+        }),
+        prisma.book.findMany({
+          where: scope,
+          select: { title: true, author: true, genre: true, status: true },
+          take: 200,
+        }),
+      ]);
+
+      return record("get_my_library_profile", {
+        totalBooks: owned.length,
+        byStatus: byStatus.map((s) => ({ status: s.status, count: s._count._all })),
+        topGenres: topGenres.map((g) => ({ genre: g.genre, count: g._count.genre })),
+        ownedTitles: owned,
+      });
+    },
+  });
+
+  return [myLibraryProfile];
+}
