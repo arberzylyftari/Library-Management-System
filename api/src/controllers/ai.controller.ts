@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { isAiConfigured, runLibraryQuery, runRecommendations } from "../ai/agent";
+import { isAiConfigured, runInsights, runLibraryQuery, runRecommendations } from "../ai/agent";
 import type { AiQueryInput } from "../schemas/ai.schema";
 
 export async function query(req: Request, res: Response): Promise<void> {
@@ -24,5 +24,17 @@ export async function recommend(req: Request, res: Response): Promise<void> {
   }
 
   const result = await runRecommendations(req.user!);
+  res.json(result);
+}
+
+export async function insights(req: Request, res: Response): Promise<void> {
+  if (!isAiConfigured()) {
+    res.status(503).json({
+      error: "AI insights panel is not configured (missing ANTHROPIC_API_KEY)",
+    });
+    return;
+  }
+
+  const result = await runInsights(req.user!);
   res.json(result);
 }

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { query, recommend } from "../controllers/ai.controller";
+import { insights, query, recommend } from "../controllers/ai.controller";
 import { requireAuth } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { aiQuerySchema } from "../schemas/ai.schema";
@@ -12,3 +12,4 @@ aiRouter.use(requireAuth);
 
 aiRouter.post("/query", validateBody(aiQuerySchema), query);
 aiRouter.post("/recommendations", recommend);
+aiRouter.post("/insights", insights);

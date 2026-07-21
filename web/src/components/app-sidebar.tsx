@@ -1,4 +1,4 @@
-import { BookMarked, Library, LogOut, Shield, Sparkles, Wand2 } from "lucide-react";
+import { BarChart3, BookMarked, Library, LogOut, Shield, Sparkles, Wand2 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ const navItems = [
   { to: "/books", label: "My Books", icon: BookMarked, adminOnly: false },
   { to: "/ask", label: "Ask AI", icon: Sparkles, adminOnly: false },
   { to: "/recommendations", label: "Recommendations", icon: Wand2, adminOnly: false },
+  { to: "/insights", label: "Insights", icon: BarChart3, adminOnly: false },
   { to: "/admin", label: "Admin", icon: Shield, adminOnly: true },
 ];
 

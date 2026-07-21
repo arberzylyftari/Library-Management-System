@@ -8,3 +8,7 @@ export async function askLibrary(question: string): Promise<AiQueryResponse> {
 export async function getRecommendations(): Promise<AiQueryResponse> {
   return api<AiQueryResponse>("/ai/recommendations", { method: "POST" });
 }
+
+export async function getInsights(): Promise<AiQueryResponse> {
+  return api<AiQueryResponse>("/ai/insights", { method: "POST" });
+}

@@ -1,7 +1,26 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "../config/env";
 import type { TokenPayload } from "../utils/jwt";
-import { createLibraryTools, createRecommendationTools, type ToolResult } from "./tools";
+import {
+  createInsightsTools,
+  createLibraryTools,
+  createRecommendationTools,
+  type ToolResult,
+} from "./tools";
+
+const INSIGHTS_SYSTEM_PROMPT = [
+  "You are the Library Insights panel for a personal library management app.",
+  "Call get_my_reading_stats to see this user's own library stats, then write a",
+  "short 'Library Insights' summary of their reading habits.",
+  "Rules:",
+  "- Use only the numbers from the tool; never invent a stat.",
+  "- Write 3-5 short bullet points, each a concrete, specific observation (e.g.",
+  "  a dominant genre, a completion rate, price spread, author diversity) —",
+  "  not vague filler like 'you enjoy reading'.",
+  "- If a stat is a tie or there isn't enough data for it (e.g. no priced books,",
+  "  or an empty library), say so plainly instead of forcing an insight.",
+  "- Format as a markdown bullet list. Keep it concise.",
+].join("\n");
 
 const RECOMMENDATION_SYSTEM_PROMPT = [
   "You are a book recommendation engine for a personal library app.",
@@ -53,6 +72,29 @@ export async function runLibraryQuery(
     tools,
     messages: [{ role: "user", content: question }],
     max_iterations: 6,
+  });
+
+  const answer = final.content
+    .filter((block): block is Anthropic.Beta.BetaTextBlock => block.type === "text")
+    .map((block) => block.text)
+    .join("\n")
+    .trim();
+
+  return { answer, results };
+}
+
+export async function runInsights(user: TokenPayload): Promise<LibraryQueryResult> {
+  const client = new Anthropic({ apiKey: env.anthropicApiKey });
+  const results: ToolResult[] = [];
+  const tools = createInsightsTools(user, results);
+
+  const final = await client.beta.messages.toolRunner({
+    model: env.anthropicModel,
+    max_tokens: 1024,
+    system: INSIGHTS_SYSTEM_PROMPT,
+    tools,
+    messages: [{ role: "user", content: "Summarize my reading habits." }],
+    max_iterations: 3,
   });
 
   const answer = final.content
