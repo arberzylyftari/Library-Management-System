@@ -10,6 +10,11 @@ export interface User {
   createdAt?: string;
 }
 
+// Admin user listing (GET /admin/users) — includes each user's book count.
+export interface AdminUser extends User {
+  bookCount: number;
+}
+
 export interface Book {
   id: string;
   title: string;
