@@ -9,7 +9,6 @@ import {
   Sparkles,
   Wand2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
@@ -24,17 +23,17 @@ const navItems = [
   { to: "/admin", label: "Admin", icon: Shield, adminOnly: true },
 ];
 
-const COLLAPSED_KEY = "library-sidebar-collapsed";
+// Shared with AppLayout, which owns the collapsed state so it can resize the
+// main content column to match.
+export const SIDEBAR_COLLAPSED_KEY = "library-sidebar-collapsed";
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
+}
+
+export function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarProps) {
   const { user, logout } = useAuth();
-  const [collapsed, setCollapsed] = useState(
-    () => localStorage.getItem(COLLAPSED_KEY) === "true",
-  );
-
-  useEffect(() => {
-    localStorage.setItem(COLLAPSED_KEY, String(collapsed));
-  }, [collapsed]);
 
   return (
     <aside
@@ -54,7 +53,7 @@ export function AppSidebar() {
           variant="ghost"
           size="icon"
           className="size-8 shrink-0"
-          onClick={() => setCollapsed((c) => !c)}
+          onClick={() => onCollapsedChange(!collapsed)}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
