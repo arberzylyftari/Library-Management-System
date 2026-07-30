@@ -4,7 +4,7 @@ import { useTheme } from "@/components/theme-provider";
 
 // Simple light/dark toggle. Clicking flips to the opposite of what's shown.
 export function ModeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, transitioning } = useTheme();
   const isDark =
     theme === "dark" ||
     (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
@@ -14,6 +14,7 @@ export function ModeToggle() {
       variant="ghost"
       size="icon"
       aria-label="Toggle theme"
+      disabled={transitioning}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       <Sun className="hidden [.dark_&]:block" />
