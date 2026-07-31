@@ -43,4 +43,28 @@ export interface AiToolResult {
 export interface AiQueryResponse {
   answer: string;
   results: AiToolResult[];
+  conversationId: string;
+  title: string;
+}
+
+// Ask AI chat history (GET /conversations, GET /conversations/:id).
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ChatMessageRole = "USER" | "ASSISTANT";
+
+export interface ConversationMessage {
+  id: string;
+  role: ChatMessageRole;
+  content: string;
+  results: AiToolResult[] | null;
+  createdAt: string;
+}
+
+export interface ConversationDetail extends ConversationSummary {
+  messages: ConversationMessage[];
 }
