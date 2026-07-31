@@ -21,15 +21,50 @@ enum ReadingStatus {
   COMPLETED
 }
 
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
-  books     Book[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  role          Role           @default(USER)
+  books         Book[]
+  conversations Conversation[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// An Ask AI chat thread. Title is auto-generated from the first question
+// (like Claude/ChatGPT auto-titling) — there's no rename feature.
+model Conversation {
+  id        String    @id @default(uuid())
+  title     String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  role           MessageRole
+  content        String       @db.Text
+  // Raw AI tool results (ToolResult[]) for ASSISTANT messages, so reopening
+  // a past conversation can re-render the same tables/stat tiles. Null for
+  // USER messages.
+  results        Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
 }
 
 model Book {
