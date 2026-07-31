@@ -24,6 +24,7 @@ user's reading habits.
 - [Environment variables](#environment-variables)
 - [API reference](#api-reference)
 - [Testing](#testing)
+- [Demo accounts](#demo-accounts)
 - [Design decisions worth knowing about](#design-decisions-worth-knowing-about)
 - [Deployment](#deployment)
 
@@ -39,12 +40,21 @@ user's reading habits.
   account) and every book across the whole system, with owner information attached.
 - Admins are protected from locking themselves out: an admin can't demote their own
   role or delete their own account.
+- A collapsible sidebar (state persists across reloads) and an animated light and dark
+  mode toggle: a full screen wipe transition, not just an instant color swap, that
+  respects `prefers-reduced-motion` and never flashes the wrong theme on load.
 
 ### AI
 
-1. **Ask AI**, a chat style natural language query agent. Ask things like "Who owns the
-   most books?", "Which is the most popular book?", or "Show the five most expensive
-   books," and get back a written answer plus the underlying data rendered as a table.
+1. **Ask AI**, a chat style natural language query agent with real, persistent
+   conversation history, like a proper chat app rather than a single-shot Q&A box. Ask
+   things like "Who owns the most books?", "Which is the most popular book?", or "Show
+   the five most expensive books," and get back a written answer plus the underlying
+   data rendered as a table. Follow-up questions work too ("What about the least
+   expensive?"), because each conversation's recent history is replayed to Claude as
+   context. Past conversations are listed in the sidebar (auto-titled from the first
+   question), can be reopened or deleted, and the list is capped to the most recent 15
+   with a "view all" popover for the rest.
 2. **Recommendations**, an engine that reads a user's reading history (genres,
    completed books, currently reading) and suggests five books they don't already own,
    with a short reason for each pick tied back to their history.
@@ -54,8 +64,8 @@ user's reading habits.
 
 ### Bonus items completed
 
-- Backend test suite (Vitest and Supertest, 42 tests covering auth, book ownership and
-  scoping, admin routes, and the AI agents' data layer).
+- Backend test suite (Vitest and Supertest, 57 tests covering auth, book ownership and
+  scoping, admin routes, chat history, and the AI agents' data layer).
 - Frontend test suite (Vitest and React Testing Library, 29 tests covering the auth
   context, route guards, forms, and shared UI components).
 - Docker and docker-compose: the whole stack (Postgres, API, web) runs with a single
@@ -174,9 +184,9 @@ model behaving correctly.
 ```
 .
 ├── api/                    Express + TypeScript backend
-│   ├── prisma/             Schema and migrations
+│   ├── prisma/             Schema, migrations, and the demo-data seed script
 │   ├── src/
-│   │   ├── ai/             Claude agents and their tool definitions
+│   │   ├── ai/             Claude agents, their tool definitions, and chat history
 │   │   ├── config/         Environment variable loading
 │   │   ├── controllers/    Route handlers
 │   │   ├── middleware/     Auth, validation, error handling
@@ -187,7 +197,7 @@ model behaving correctly.
 ├── web/                    React + Vite frontend
 │   ├── src/
 │   │   ├── components/     Reusable UI components, including ui/ (design system)
-│   │   ├── context/        Auth context
+│   │   ├── context/        Auth and Ask AI chat state
 │   │   ├── layouts/        App shell (sidebar, protected layout)
 │   │   ├── lib/             API clients and shared utilities
 │   │   └── pages/          Top level routed pages
@@ -216,11 +226,12 @@ cp .env.example .env
 # set JWT_SECRET to any long random string,
 # optionally set ANTHROPIC_API_KEY to enable the AI features
 npx prisma migrate deploy
+npm run db:seed   # optional, adds a few demo accounts with sample libraries
 npm run dev
 ```
 
 The API starts on `http://localhost:4000` by default. `GET /health` is a good first
-check.
+check. See [Demo accounts](#demo-accounts) for the seeded logins.
 
 ### Frontend setup
 
@@ -327,9 +338,17 @@ everything)
 - `GET /admin/books`, list every book across every user, with owner details
 
 **AI** (all require auth, all return 503 if `ANTHROPIC_API_KEY` isn't set)
-- `POST /ai/query`, ask a natural language question, body: `{ "question": string }`
+- `POST /ai/query`, ask a natural language question, body:
+  `{ "question": string, "conversationId"?: string }`. Omit `conversationId` to start a
+  new conversation; the response includes the (new or existing) `conversationId` and
+  its `title` so the frontend can track the thread.
 - `POST /ai/recommendations`, get five book recommendations based on reading history
 - `POST /ai/insights`, get a written summary of reading habits plus the underlying stats
+
+**Conversations** (Ask AI chat history, all require auth, always scoped to the caller)
+- `GET /conversations`, list the caller's conversations, newest first
+- `GET /conversations/:id`, get a conversation with its full message history
+- `DELETE /conversations/:id`, delete a conversation and its messages
 
 ## Testing
 
@@ -348,12 +367,42 @@ whatever database you use for `npm run dev`) and clears it between tests. If you
 Postgres uses different credentials than the `postgres:postgres` default, set
 `TEST_DATABASE_URL` before running the tests.
 
+Of the 57 backend tests, 15 cover Ask AI's conversation history specifically: replaying
+prior turns as context, capping how much history gets sent, and the usual
+create/read/delete ownership rules for a conversation.
+
 The AI agents' prompts and Claude's actual answers aren't unit tested (that would mean
 either mocking the model's behavior, which doesn't prove much, or making real, billed,
 non-deterministic API calls on every test run, which isn't practical). Instead, the
 Prisma backed tools each agent calls are tested directly, which is where the actual
 safety boundary lives, and the end to end behavior against the real Claude API was
 verified manually while building each feature.
+
+## Demo accounts
+
+A seed script fills the database with a handful of demo accounts, each with a real,
+varied library, so there's something to look at immediately instead of starting from an
+empty account. Every demo account uses the same password:
+
+| Email | Password | Notes |
+| --- | --- | --- |
+| dean.henderson@gmail.com | `12345678` | 11 books, mixed genres and statuses |
+| janice.smith@gmail.com | `12345678` | 14 books, leans technical and sci-fi |
+| stephanie.joelington@gmail.com | `12345678` | 14 books, classic literature |
+| oliver.dasilva@gmail.com | `12345678` | 12 books, fantasy and drama |
+| sarah.elisee@gmail.com | `12345678` | Empty library, for testing the empty state and cold-start AI behavior |
+
+Run the seed script after migrating:
+
+```bash
+cd api
+npm run db:seed
+```
+
+It's safe to run more than once: users are matched by email, and a user's books are
+only created the first time (if they already have some, they're left untouched). None
+of these accounts are admins; promote one yourself if you want to try the admin
+dashboard (see [Getting started](#getting-started)).
 
 ## Design decisions worth knowing about
 
