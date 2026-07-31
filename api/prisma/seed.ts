@@ -3,7 +3,7 @@
 // books by hand. Safe to run repeatedly: users are upserted by email, and a
 // user's books are only created the first time (if they already have any,
 // they're left alone).
-import { PrismaClient, type ReadingStatus } from "@prisma/client";
+import { PrismaClient, type ReadingStatus, type Role } from "@prisma/client";
 import { hashPassword } from "../src/utils/password";
 
 const prisma = new PrismaClient();
@@ -21,10 +21,23 @@ interface DemoBook {
 interface DemoUser {
   name: string;
   email: string;
+  role?: Role; // defaults to USER
   books: DemoBook[];
 }
 
 const DEMO_USERS: DemoUser[] = [
+  {
+    // The admin account — sees the Admin dashboard (all users + all books).
+    name: "Arber Zylyftari",
+    email: "arberzylyftari123@gmail.com",
+    role: "ADMIN",
+    books: [
+      { title: "Refactoring", author: "Martin Fowler", genre: "Programming", status: "READING", price: 44.99 },
+      { title: "Designing Data-Intensive Applications", author: "Martin Kleppmann", genre: "Software Architecture", status: "WANT_TO_READ", price: 39.99 },
+      { title: "The Phoenix Project", author: "Gene Kim", genre: "Business Fiction", status: "COMPLETED", price: 19.99 },
+      { title: "Grokking Algorithms", author: "Aditya Bhargava", genre: "Computer Science", status: "READING", price: 24.99 },
+    ],
+  },
   {
     name: "Dean Henderson",
     email: "dean.henderson@gmail.com",
@@ -116,12 +129,19 @@ async function main() {
     const user = await prisma.user.upsert({
       where: { email: demo.email },
       update: {},
-      create: { name: demo.name, email: demo.email, password: passwordHash, role: "USER" },
+      create: {
+        name: demo.name,
+        email: demo.email,
+        password: passwordHash,
+        role: demo.role ?? "USER",
+      },
     });
+
+    const label = demo.role === "ADMIN" ? `${demo.email} (admin)` : demo.email;
 
     const existingBookCount = await prisma.book.count({ where: { userId: user.id } });
     if (existingBookCount > 0) {
-      console.log(`- ${demo.email}: already has ${existingBookCount} books, leaving as is`);
+      console.log(`- ${label}: already has ${existingBookCount} books, leaving as is`);
       continue;
     }
 
@@ -130,7 +150,7 @@ async function main() {
         data: demo.books.map((b) => ({ ...b, userId: user.id })),
       });
     }
-    console.log(`- ${demo.email}: seeded with ${demo.books.length} books`);
+    console.log(`- ${label}: seeded with ${demo.books.length} books`);
   }
 }
 
