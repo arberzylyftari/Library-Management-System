@@ -21,12 +21,14 @@ export function AppLayout() {
       <div className="flex h-svh overflow-hidden">
         <AppSidebar collapsed={collapsed} onCollapsedChange={setCollapsed} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          {/* More width is put to use once the sidebar frees it up, instead
-              of leaving a fixed centered column with growing empty margins. */}
+          {/* Fills most of the width on large screens (a tight centered
+              column left big empty margins on wide monitors) while staying
+              padded and readable on smaller ones. Collapsing the sidebar
+              widens it a little further into the reclaimed space. */}
           <div
             className={cn(
-              "mx-auto w-full px-6 py-8",
-              collapsed ? "max-w-7xl px-10" : "max-w-5xl",
+              "mx-auto w-full px-6 py-8 md:px-10",
+              collapsed ? "max-w-[2200px]" : "max-w-[2000px]",
             )}
           >
             <Outlet />
