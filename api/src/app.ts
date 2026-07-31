@@ -5,6 +5,7 @@ import { adminRouter } from "./routes/admin.routes";
 import { aiRouter } from "./routes/ai.routes";
 import { authRouter } from "./routes/auth.routes";
 import { bookRouter } from "./routes/book.routes";
+import { conversationRouter } from "./routes/conversation.routes";
 
 export const app = express();
 
@@ -19,6 +20,7 @@ app.use("/auth", authRouter);
 app.use("/books", bookRouter);
 app.use("/admin", adminRouter);
 app.use("/ai", aiRouter);
+app.use("/conversations", conversationRouter);
 
 app.use(errorHandler);
 
