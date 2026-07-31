@@ -47,7 +47,6 @@ services:
     rootDir: ./web
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
-    plan: free
     routes:
       - type: rewrite
         source: /api/*
