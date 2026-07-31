@@ -46,6 +46,7 @@ const SYSTEM_PROMPT = [
   "- Prices may be null (unknown) for some books; say so rather than guessing.",
   "- Answer concisely in plain language. The UI also shows the raw rows as a table, so don't repeat every row — summarize.",
   "- If the tools return no data, say so plainly.",
+  "- Earlier turns in this conversation may be included for context. Use them to resolve follow-ups like 'what about the least ones?', but always call tools again for any new data the follow-up needs — never answer from memory of an earlier tool result alone.",
 ].join("\n");
 
 export function isAiConfigured(): boolean {
@@ -57,9 +58,15 @@ export interface LibraryQueryResult {
   results: ToolResult[];
 }
 
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export async function runLibraryQuery(
   user: TokenPayload,
   question: string,
+  history: ChatTurn[] = [],
 ): Promise<LibraryQueryResult> {
   const client = new Anthropic({ apiKey: env.anthropicApiKey });
   const results: ToolResult[] = [];
@@ -70,7 +77,7 @@ export async function runLibraryQuery(
     max_tokens: 2048,
     system: SYSTEM_PROMPT,
     tools,
-    messages: [{ role: "user", content: question }],
+    messages: [...history, { role: "user", content: question }],
     max_iterations: 6,
   });
 
