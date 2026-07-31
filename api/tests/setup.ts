@@ -1,8 +1,10 @@
 import { afterAll, beforeEach } from "vitest";
 import { prisma } from "../src/lib/prisma";
 
-// Books before users — Book.userId has an FK to User.
+// Children before parents — Message -> Conversation -> User, Book -> User.
 beforeEach(async () => {
+  await prisma.message.deleteMany();
+  await prisma.conversation.deleteMany();
   await prisma.book.deleteMany();
   await prisma.user.deleteMany();
 });
