@@ -384,13 +384,14 @@ A seed script fills the database with a handful of demo accounts, each with a re
 varied library, so there's something to look at immediately instead of starting from an
 empty account. Every demo account uses the same password:
 
-| Email | Password | Notes |
-| --- | --- | --- |
-| dean.henderson@gmail.com | `12345678` | 11 books, mixed genres and statuses |
-| janice.smith@gmail.com | `12345678` | 14 books, leans technical and sci-fi |
-| stephanie.joelington@gmail.com | `12345678` | 14 books, classic literature |
-| oliver.dasilva@gmail.com | `12345678` | 12 books, fantasy and drama |
-| sarah.elisee@gmail.com | `12345678` | Empty library, for testing the empty state and cold-start AI behavior |
+| Email | Password | Role | Notes |
+| --- | --- | --- | --- |
+| arberzylyftari123@gmail.com | `12345678` | Admin | Sees the Admin dashboard (all users and all books); 4 books of its own |
+| dean.henderson@gmail.com | `12345678` | User | 11 books, mixed genres and statuses |
+| janice.smith@gmail.com | `12345678` | User | 14 books, leans technical and sci-fi |
+| stephanie.joelington@gmail.com | `12345678` | User | 14 books, classic literature |
+| oliver.dasilva@gmail.com | `12345678` | User | 12 books, fantasy and drama |
+| sarah.elisee@gmail.com | `12345678` | User | Empty library, for testing the empty state and cold-start AI behavior |
 
 Run the seed script after migrating:
 
@@ -400,9 +401,8 @@ npm run db:seed
 ```
 
 It's safe to run more than once: users are matched by email, and a user's books are
-only created the first time (if they already have some, they're left untouched). None
-of these accounts are admins; promote one yourself if you want to try the admin
-dashboard (see [Getting started](#getting-started)).
+only created the first time (if they already have some, they're left untouched). Log in
+as the admin account above to see the Admin dashboard.
 
 ## Design decisions worth knowing about
 
