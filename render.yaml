@@ -1,0 +1,55 @@
+databases:
+  - name: library-db
+    plan: free
+    databaseName: library
+    user: library
+
+services:
+  # Built from api/Dockerfile. Render's Docker builds don't support picking a
+  # build stage, so this always builds the final "runtime" stage, exactly
+  # the lean, production image the local docker-compose setup uses too.
+  # That image deliberately has no Prisma CLI, so migrations are NOT run
+  # here — run `npx prisma migrate deploy` from a local machine against this
+  # database's external connection string instead (see README > Deployment).
+  - type: web
+    name: library-api
+    runtime: docker
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: library-db
+          property: connectionString
+      - key: PORT
+        value: "4000"
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-haiku-4-5
+
+  # Static build of the Vite SPA, served from Render's CDN rather than the
+  # nginx Docker image used locally. The /api/* rewrite below reproduces
+  # nginx's reverse proxy so the frontend's relative /api/... fetches keep
+  # working unchanged. If library-api ends up on a different hostname than
+  # guessed here (Render only guarantees the name if it's available), update
+  # the destination below (or the Redirects/Rewrites tab in the Render
+  # dashboard) to match the API service's actual URL.
+  - type: web
+    name: library-web
+    runtime: static
+    rootDir: ./web
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    plan: free
+    routes:
+      - source: /api/*
+        destination: https://library-api.onrender.com/*
+      - source: /*
+        destination: /index.html
