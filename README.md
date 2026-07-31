@@ -432,6 +432,11 @@ The app is live on Render: **https://library-web-rm74.onrender.com**
 Log in with any of the seeded [demo accounts](#demo-accounts) (all password `12345678`),
 or register a new one.
 
+> **Heads up on first load:** it's hosted on a free plan, which puts the app to sleep
+> after a stretch of inactivity. If you're the first to open it in a while, the initial
+> page load can take up to a minute while the server wakes back up. That's expected, no
+> need to refresh, and everything is snappy once it's awake.
+
 It runs on Render's free tier, defined by the `render.yaml` Blueprint at the repo root,
 which provisions three resources: a Postgres database, the API as a Docker web service
 (built from `api/Dockerfile`), and the frontend as a static site whose rewrite rules
