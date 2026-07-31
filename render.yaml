@@ -49,7 +49,9 @@ services:
     staticPublishPath: ./dist
     plan: free
     routes:
-      - source: /api/*
+      - type: rewrite
+        source: /api/*
         destination: https://library-api.onrender.com/*
-      - source: /*
+      - type: rewrite
+        source: /*
         destination: /index.html
