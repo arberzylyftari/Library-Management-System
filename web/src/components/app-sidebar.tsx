@@ -2,16 +2,20 @@ import {
   BarChart3,
   BookMarked,
   Library,
+  Loader2,
   LogOut,
+  MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
   Shield,
   Sparkles,
+  Trash2,
   Wand2,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
-import { ModeToggle } from "@/components/mode-toggle";
+import { NavLink, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/mode-toggle";
+import { useAskChat } from "@/context/ask-chat";
 import { useAuth } from "@/context/auth";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +38,8 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarProps) {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const onAskPage = location.pathname === "/ask";
 
   return (
     <aside
@@ -65,23 +71,26 @@ export function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarProps) {
         {navItems
           .filter((item) => !item.adminOnly || user?.role === "ADMIN")
           .map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              title={collapsed ? label : undefined}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  collapsed && "justify-center px-0",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                )
-              }
-            >
-              <Icon className="size-4 shrink-0" />
-              {!collapsed && <span className="truncate">{label}</span>}
-            </NavLink>
+            <div key={to} className="flex flex-col gap-1">
+              <NavLink
+                to={to}
+                title={collapsed ? label : undefined}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    collapsed && "justify-center px-0",
+                    isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                  )
+                }
+              >
+                <Icon className="size-4 shrink-0" />
+                {!collapsed && <span className="truncate">{label}</span>}
+              </NavLink>
+
+              {to === "/ask" && onAskPage && !collapsed && <AskChatList />}
+            </div>
           ))}
       </nav>
 
@@ -111,5 +120,65 @@ export function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarProps) {
         )}
       </div>
     </aside>
+  );
+}
+
+// The Ask AI chat list, nested inline under its nav item — only rendered
+// while on /ask (and while the sidebar isn't collapsed to an icon rail).
+function AskChatList() {
+  const { conversations, conversationsLoading, activeId, busy, startNewChat, openConversation, requestDelete } =
+    useAskChat();
+
+  return (
+    <div className="ml-3.5 flex flex-col gap-0.5 border-l py-1 pl-2.5">
+      <button
+        type="button"
+        onClick={startNewChat}
+        disabled={busy}
+        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <MessageSquarePlus className="size-3.5 shrink-0" />
+        New chat
+      </button>
+
+      {conversationsLoading ? (
+        <div className="flex justify-center py-3">
+          <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+        </div>
+      ) : conversations.length === 0 ? (
+        <p className="px-2 py-2 text-xs text-muted-foreground">No past chats yet.</p>
+      ) : (
+        conversations.map((c) => (
+          <div
+            key={c.id}
+            className={cn(
+              "group flex items-center gap-1 rounded-md pr-1 pl-2 text-xs",
+              c.id === activeId
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => void openConversation(c.id)}
+              disabled={busy}
+              className="min-w-0 flex-1 truncate py-1.5 text-left disabled:cursor-not-allowed"
+              title={c.title}
+            >
+              {c.title}
+            </button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-5 shrink-0 opacity-0 group-hover:opacity-100"
+              onClick={() => requestDelete(c.id)}
+            >
+              <Trash2 className="size-3" />
+              <span className="sr-only">Delete chat</span>
+            </Button>
+          </div>
+        ))
+      )}
+    </div>
   );
 }
