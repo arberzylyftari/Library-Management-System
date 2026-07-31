@@ -427,7 +427,29 @@ A few choices that might raise questions on a quick read through the code:
 
 ## Deployment
 
-Not deployed yet. The application is fully containerized and ready to deploy to any
-platform that can run docker-compose or accept individual container images (Render,
-Railway, Fly.io, and similar are all reasonable fits), but a full end to end check of
-the system is planned before choosing a host and going live.
+The app is live on Render: **https://library-web-rm74.onrender.com**
+
+Log in with any of the seeded [demo accounts](#demo-accounts) (all password `12345678`),
+or register a new one.
+
+It runs on Render's free tier, defined by the `render.yaml` Blueprint at the repo root,
+which provisions three resources: a Postgres database, the API as a Docker web service
+(built from `api/Dockerfile`), and the frontend as a static site whose rewrite rules
+reproduce what nginx does locally (`/api/*` proxied to the API, everything else falling
+back to `index.html` for client side routing). Two things to know about the free tier:
+
+- The services spin down after about 15 minutes of inactivity, so the first request
+  after an idle period takes 30 to 60 seconds to wake up. It's quick after that.
+- Render's free Postgres expires 30 days after creation, so the live database (and its
+  demo data) is not permanent on this plan.
+
+Because the deployed API image is the lean production stage of the Dockerfile (no Prisma
+CLI, by design) and Render can't target a different build stage, database migrations
+aren't run inside the container. They're applied once from a local machine against the
+database's external connection string:
+
+```bash
+cd api
+DATABASE_URL="<external database URL from Render>" npm run migrate:deploy
+DATABASE_URL="<external database URL from Render>" npm run db:seed   # optional demo data
+```

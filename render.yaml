@@ -37,10 +37,8 @@ services:
   # Static build of the Vite SPA, served from Render's CDN rather than the
   # nginx Docker image used locally. The /api/* rewrite below reproduces
   # nginx's reverse proxy so the frontend's relative /api/... fetches keep
-  # working unchanged. If library-api ends up on a different hostname than
-  # guessed here (Render only guarantees the name if it's available), update
-  # the destination below (or the Redirects/Rewrites tab in the Render
-  # dashboard) to match the API service's actual URL.
+  # working unchanged. The destination is library-api's actual Render URL
+  # (Render appended a suffix since the plain "library-api" name was taken).
   - type: web
     name: library-web
     runtime: static
@@ -50,7 +48,7 @@ services:
     routes:
       - type: rewrite
         source: /api/*
-        destination: https://library-api.onrender.com/*
+        destination: https://library-api-cwxz.onrender.com/*
       - type: rewrite
         source: /*
         destination: /index.html
