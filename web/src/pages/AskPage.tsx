@@ -5,18 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { QueryResultView } from "@/components/query-result-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ApiError } from "@/lib/api";
-import { askLibrary } from "@/lib/ai";
-import type { AiToolResult } from "@/lib/types";
-
-interface Exchange {
-  id: number;
-  question: string;
-  status: "loading" | "done" | "error";
-  answer?: string;
-  results?: AiToolResult[];
-  error?: string;
-}
+import { useAskChat } from "@/context/ask-chat";
 
 const SUGGESTIONS = [
   "Who owns the most books?",
@@ -25,40 +14,18 @@ const SUGGESTIONS = [
   "Summarize my reading habits.",
 ];
 
+// The chat list itself lives in the sidebar (see AppSidebar/AskChatList) —
+// this page is just the prompt box and the exchange history for whichever
+// conversation is currently active, both driven by the shared AskChatProvider.
 export function AskPage() {
   const [question, setQuestion] = useState("");
-  const [exchanges, setExchanges] = useState<Exchange[]>([]);
-  const [busy, setBusy] = useState(false);
-
-  const ask = async (q: string) => {
-    const trimmed = q.trim();
-    if (!trimmed || busy) return;
-    const id = Date.now();
-    setExchanges((prev) => [{ id, question: trimmed, status: "loading" }, ...prev]);
-    setQuestion("");
-    setBusy(true);
-    try {
-      const res = await askLibrary(trimmed);
-      setExchanges((prev) =>
-        prev.map((ex) =>
-          ex.id === id
-            ? { ...ex, status: "done", answer: res.answer, results: res.results }
-            : ex,
-        ),
-      );
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Something went wrong";
-      setExchanges((prev) =>
-        prev.map((ex) => (ex.id === id ? { ...ex, status: "error", error: message } : ex)),
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
+  const { exchanges, busy, loadingConversation, ask } = useAskChat();
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    void ask(question);
+    const q = question;
+    setQuestion("");
+    void ask(q);
   };
 
   return (
@@ -81,7 +48,7 @@ export function AskPage() {
         </Button>
       </form>
 
-      {exchanges.length === 0 && (
+      {exchanges.length === 0 && !loadingConversation && (
         <div className="flex flex-wrap gap-2">
           {SUGGESTIONS.map((s) => (
             <Button
@@ -97,41 +64,43 @@ export function AskPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-4">
-        {exchanges.map((ex) => (
-          <div
-            key={ex.id}
-            className="flex flex-col gap-3 rounded-lg border p-4 duration-200 animate-in fade-in slide-in-from-top-2"
-          >
-            <p className="text-sm font-medium">{ex.question}</p>
+      {loadingConversation ? (
+        <div className="flex items-center justify-center rounded-lg border p-16">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {exchanges.map((ex) => (
+            <div
+              key={ex.id}
+              className="flex flex-col gap-3 rounded-lg border p-4 duration-200 animate-in fade-in slide-in-from-top-2"
+            >
+              <p className="text-sm font-medium">{ex.question}</p>
 
-            {ex.status === "loading" && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                Thinking…
-              </div>
-            )}
+              {ex.status === "loading" && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Thinking…
+                </div>
+              )}
 
-            {ex.status === "error" && (
-              <p className="text-sm text-destructive">{ex.error}</p>
-            )}
+              {ex.status === "error" && <p className="text-sm text-destructive">{ex.error}</p>}
 
-            {ex.status === "done" && (
-              <div className="flex flex-col gap-4">
-                {ex.answer && (
-                  <div className="flex gap-2">
-                    <Sparkles className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <AnswerMarkdown>{ex.answer}</AnswerMarkdown>
-                  </div>
-                )}
-                {ex.results?.map((result, i) => (
-                  <QueryResultView key={i} result={result} />
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+              {ex.status === "done" && (
+                <div className="flex flex-col gap-4">
+                  {ex.answer && (
+                    <div className="flex gap-2">
+                      <Sparkles className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <AnswerMarkdown>{ex.answer}</AnswerMarkdown>
+                    </div>
+                  )}
+                  {ex.results?.map((result, i) => <QueryResultView key={i} result={result} />)}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
