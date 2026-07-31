@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookMarked,
+  ChevronDown,
   Library,
   Loader2,
   LogOut,
@@ -12,11 +13,14 @@ import {
   Trash2,
   Wand2,
 } from "lucide-react";
+import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAskChat } from "@/context/ask-chat";
 import { useAuth } from "@/context/auth";
+import type { ConversationSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -123,11 +127,25 @@ export function AppSidebar({ collapsed, onCollapsedChange }: AppSidebarProps) {
   );
 }
 
+// Past a point, an always-growing inline list would make the sidebar itself
+// grow without bound. Show only the most recent ones inline; the rest are
+// reachable through the "View all chats" popover below.
+const SIDEBAR_VISIBLE_LIMIT = 15;
+
 // The Ask AI chat list, nested inline under its nav item — only rendered
 // while on /ask (and while the sidebar isn't collapsed to an icon rail).
 function AskChatList() {
   const { conversations, conversationsLoading, activeId, busy, startNewChat, openConversation, requestDelete } =
     useAskChat();
+  const [viewAllOpen, setViewAllOpen] = useState(false);
+
+  const visible = conversations.slice(0, SIDEBAR_VISIBLE_LIMIT);
+  const hasMore = conversations.length > SIDEBAR_VISIBLE_LIMIT;
+
+  const openFromList = (id: string) => {
+    void openConversation(id);
+    setViewAllOpen(false);
+  };
 
   return (
     <div className="ml-3.5 flex flex-col gap-0.5 border-l py-1 pl-2.5">
@@ -148,37 +166,94 @@ function AskChatList() {
       ) : conversations.length === 0 ? (
         <p className="px-2 py-2 text-xs text-muted-foreground">No past chats yet.</p>
       ) : (
-        conversations.map((c) => (
-          <div
-            key={c.id}
-            className={cn(
-              "group flex items-center gap-1 rounded-md pr-1 pl-2 text-xs",
-              c.id === activeId
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-            )}
-          >
-            <button
-              type="button"
-              onClick={() => void openConversation(c.id)}
-              disabled={busy}
-              className="min-w-0 flex-1 truncate py-1.5 text-left disabled:cursor-not-allowed"
-              title={c.title}
-            >
-              {c.title}
-            </button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-5 shrink-0 opacity-0 group-hover:opacity-100"
-              onClick={() => requestDelete(c.id)}
-            >
-              <Trash2 className="size-3" />
-              <span className="sr-only">Delete chat</span>
-            </Button>
-          </div>
-        ))
+        <>
+          {visible.map((c) => (
+            <ChatRow
+              key={c.id}
+              conversation={c}
+              active={c.id === activeId}
+              busy={busy}
+              onOpen={() => void openConversation(c.id)}
+              onDelete={() => requestDelete(c.id)}
+            />
+          ))}
+
+          {hasMore && (
+            <Popover open={viewAllOpen} onOpenChange={setViewAllOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+                >
+                  <ChevronDown className="size-3.5 shrink-0" />
+                  View all chats ({conversations.length})
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="right" align="start" className="max-h-96 overflow-y-auto">
+                <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                  All chats ({conversations.length})
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {conversations.map((c) => (
+                    <ChatRow
+                      key={c.id}
+                      conversation={c}
+                      active={c.id === activeId}
+                      busy={busy}
+                      onOpen={() => openFromList(c.id)}
+                      onDelete={() => requestDelete(c.id)}
+                    />
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </>
       )}
+    </div>
+  );
+}
+
+function ChatRow({
+  conversation,
+  active,
+  busy,
+  onOpen,
+  onDelete,
+}: {
+  conversation: ConversationSummary;
+  active: boolean;
+  busy: boolean;
+  onOpen: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "group flex items-center gap-1 rounded-md pr-1 pl-2 text-xs",
+        active
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        disabled={busy}
+        className="min-w-0 flex-1 truncate py-1.5 text-left disabled:cursor-not-allowed"
+        title={conversation.title}
+      >
+        {conversation.title}
+      </button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-5 shrink-0 opacity-0 group-hover:opacity-100"
+        onClick={onDelete}
+      >
+        <Trash2 className="size-3" />
+        <span className="sr-only">Delete chat</span>
+      </Button>
     </div>
   );
 }
